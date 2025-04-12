@@ -67,10 +67,9 @@ elif tab == "Право":
 if st.session_state.history:
     st.markdown("### История разговоров:")
     for idx, (topic, q, a) in enumerate(reversed(st.session_state.history[-10:]), 1):
-        st.markdown(f"**{idx}. [{topic}]**
-**Ты:** {q}
-
-**LifeHUB:** {a}")
+        st.markdown(f"**{idx}. [{topic}]**")
+        st.markdown(f"**Ты:** {q}")
+        st.markdown(f"**LifeHUB:** {a}")
 
     if st.button("Очистить историю"):
         st.session_state.history.clear()
