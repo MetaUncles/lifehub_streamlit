@@ -22,7 +22,7 @@ if st.button("Поговорить"):
         prompt = f"Человек испытывает {selected}. Он описал это так: {user_input}. Ответь с поддержкой и эмпатией."
 
         api_url = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-alpha"
-        headers = {headers = {"Authorization": "Bearer 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"}  # Можно добавить токен Hugging Face сюда: {"Authorization": "Bearer hf_..."}
+        headers = {"Authorization": "Bearer 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"}  # Можно добавить токен Hugging Face сюда: {"Authorization": "Bearer hf_..."}
         payload = {"inputs": prompt}
 
         response = requests.post(api_url, headers=headers, json=payload)
