@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import matplotlib.pyplot as plt
+import pandas as pd
 from collections import Counter
 
 st.set_page_config(page_title="LifeHUB", page_icon="💙")
@@ -52,7 +52,6 @@ if tab == "Эмоции":
             answer = query_huggingface(full_prompt)
 
             st.session_state.history.append(("Эмоции", user_input, answer, emotion))
-
             st.success(answer)
 
 elif tab == "График настроения":
@@ -61,14 +60,13 @@ elif tab == "График настроения":
 
     if emotion_list:
         counts = Counter(emotion_list)
-        labels = [f"{EMOJI_MAP.get(e, '')} {e.capitalize()}" for e in counts.keys()]
-        values = list(counts.values())
-
-        fig, ax = plt.subplots()
-        ax.bar(labels, values)
-        ax.set_ylabel("Частота")
-        ax.set_title("Настроение за всё время")
-        st.pyplot(fig)
+        data = {
+            "Эмоция": [f"{EMOJI_MAP.get(e, '')} {e.capitalize()}" for e in counts.keys()],
+            "Количество": list(counts.values())
+        }
+        df = pd.DataFrame(data)
+        df.set_index("Эмоция", inplace=True)
+        st.bar_chart(df)
     else:
         st.info("Пока нет данных для построения графика.")
 
