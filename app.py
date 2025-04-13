@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+import matplotlib.pyplot as plt
+from collections import Counter
 
 st.set_page_config(page_title="LifeHUB", page_icon="💙")
 
@@ -9,84 +11,76 @@ if "history" not in st.session_state:
 API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-alpha"
 HEADERS = {"Authorization": "Bearer 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"}
 
+EMOJI_MAP = {
+    "anxiety": "😟",
+    "sadness": "😢",
+    "apathy": "😐",
+    "panic": "😰",
+    "anger": "😠",
+    "loneliness": "😔",
+    "joy": "😊",
+    "love": "❤️",
+    "hope": "🌈",
+    "fear": "😨"
+}
+
 def query_huggingface(prompt):
-    payload = {"inputs": prompt}
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
     if response.status_code == 200:
         try:
-            return response.json()[0]["generated_text"]
+            return response.json()[0]["generated_text"].strip().lower()
         except:
             return "Ошибка при разборе ответа."
     else:
         return "Ошибка API или лимит исчерпан."
 
-tab = st.sidebar.radio("Навигация", ["Эмоции", "Право", "Здоровье", "Отношения", "Дети"])
+tab = st.sidebar.radio("Навигация", ["Эмоции", "График настроения", "История"])
 
 if tab == "Эмоции":
     st.title("LifeHUB — Эмоциональный помощник")
     st.markdown("Как ты себя сейчас чувствуешь?")
-    emotions = {
-        "😟 Тревога": "anxiety",
-        "😢 Печаль": "sadness",
-        "😐 Апатия": "apathy",
-        "😰 Паника": "panic",
-        "😠 Злость": "anger",
-        "😔 Одиночество": "loneliness"
-    }
-    selected = st.selectbox("Выбери эмоцию", list(emotions.keys()))
     user_input = st.text_area("Расскажи, что ты чувствуешь...")
+
     if st.button("Поговорить", key="emotion"):
-        with st.spinner("Генерация ответа..."):
-            prompt = f"Человек испытывает {selected}. Он описал это так: {user_input}. Ответь с поддержкой и эмпатией."
-            answer = query_huggingface(prompt)
-            st.session_state.history.append(("Эмоции", user_input, answer))
+        with st.spinner("Определяем твою эмоцию..."):
+            detect_prompt = f"Определи основную эмоцию человека по тексту: '{user_input}'. Ответь одним словом на английском."
+            emotion = query_huggingface(detect_prompt)
+            emoji = EMOJI_MAP.get(emotion, "🔍")
+            st.info(f"Определено: **{emotion.capitalize()}** {emoji}")
+
+            full_prompt = f"Человек испытывает {emotion}. Он описал это так: {user_input}. Ответь с поддержкой и эмпатией."
+            answer = query_huggingface(full_prompt)
+
+            st.session_state.history.append(("Эмоции", user_input, answer, emotion))
+
             st.success(answer)
 
-elif tab == "Право":
-    st.title("LifeHUB — Юридический помощник")
-    legal_input = st.text_area("Задай юридический вопрос:")
-    if st.button("Получить ответ", key="legal"):
-        with st.spinner("AI анализирует ваш вопрос..."):
-            prompt = f"Ты юридический помощник. Ответь кратко, понятно и по делу на вопрос: {legal_input}"
-            answer = query_huggingface(prompt)
-            st.session_state.history.append(("Право", legal_input, answer))
-            st.success(answer)
+elif tab == "График настроения":
+    st.title("Эмоциональное состояние")
+    emotion_list = [e for (_, _, _, e) in st.session_state.history if e]
 
-elif tab == "Здоровье":
-    st.title("LifeHUB — Медицинская поддержка")
-    health_input = st.text_area("Опиши, что тебя беспокоит:")
-    if st.button("Получить совет", key="health"):
-        with st.spinner("AI обрабатывает симптомы..."):
-            prompt = f"Ты — доброжелательный врач. Не ставь диагноз, но опиши возможные причины и рекомендации. Вот жалоба: {health_input}"
-            answer = query_huggingface(prompt)
-            st.session_state.history.append(("Здоровье", health_input, answer))
-            st.success(answer)
+    if emotion_list:
+        counts = Counter(emotion_list)
+        labels = [f"{EMOJI_MAP.get(e, '')} {e.capitalize()}" for e in counts.keys()]
+        values = list(counts.values())
 
-elif tab == "Отношения":
-    st.title("LifeHUB — Поддержка в отношениях")
-    relation_input = st.text_area("Что происходит в отношениях?")
-    if st.button("Поговорить", key="relations"):
-        with st.spinner("AI поддерживает тебя..."):
-            prompt = f"Ты — эмпатичный семейный психолог. Помоги человеку разобраться в ситуации: {relation_input}"
-            answer = query_huggingface(prompt)
-            st.session_state.history.append(("Отношения", relation_input, answer))
-            st.success(answer)
+        fig, ax = plt.subplots()
+        ax.bar(labels, values)
+        ax.set_ylabel("Частота")
+        ax.set_title("Настроение за всё время")
+        st.pyplot(fig)
+    else:
+        st.info("Пока нет данных для построения графика.")
 
-elif tab == "Дети":
-    st.title("LifeHUB — Детский помощник")
-    kids_input = st.text_area("Что ты хочешь узнать о ребёнке или для ребёнка?")
-    if st.button("Получить идею", key="kids"):
-        with st.spinner("AI думает, как помочь..."):
-            prompt = f"Ты — педагог и игровой тренер. Ответь доброжелательно и творчески: {kids_input}"
-            answer = query_huggingface(prompt)
-            st.session_state.history.append(("Дети", kids_input, answer))
-            st.success(answer)
-
-if st.session_state.history:
-    st.markdown("### История разговоров:")
-    for idx, (topic, q, a) in enumerate(reversed(st.session_state.history[-10:]), 1):
-        st.markdown(f"**{idx}. [{topic}]**")
-        st.markdown(f"**Ты:** {q}")
-        st.markdown(f"**LifeHUB:** {a}")
-    if st.button("Очистить историю"):
-        st.session_state.history.clear()
+elif tab == "История":
+    st.title("История разговоров")
+    if st.session_state.history:
+        for idx, (topic, q, a, emotion) in enumerate(reversed(st.session_state.history[-20:]), 1):
+            emoji = EMOJI_MAP.get(emotion, "")
+            st.markdown(f"**{idx}. [{topic}]** {emoji}")
+            st.markdown(f"**Ты:** {q}")
+            st.markdown(f"**LifeHUB:** {a}")
+        if st.button("Очистить историю"):
+            st.session_state.history.clear()
+    else:
+        st.info("История пока пуста.")
