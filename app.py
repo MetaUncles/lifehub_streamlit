@@ -28,7 +28,7 @@ def query_huggingface(prompt):
     response = requests.post(API_URL, headers=HEADERS, json={"inputs": prompt})
     if response.status_code == 200:
         try:
-            return response.json()[0]["generated_text"].strip().lower()
+            return response.json()[0]["generated_text"].strip()
         except:
             return "Ошибка при разборе ответа."
     else:
@@ -44,12 +44,17 @@ if tab == "Эмоции":
     if st.button("Поговорить", key="emotion"):
         with st.spinner("Определяем твою эмоцию..."):
             detect_prompt = f"Определи основную эмоцию человека по тексту: '{user_input}'. Ответь одним словом на английском."
-            emotion = query_huggingface(detect_prompt)
+            emotion = query_huggingface(detect_prompt).lower()
             emoji = EMOJI_MAP.get(emotion, "🔍")
             st.info(f"Определено: **{emotion.capitalize()}** {emoji}")
 
-            full_prompt = f"Человек испытывает {emotion}. Он описал это так: {user_input}. Ответь с поддержкой и эмпатией."
-            answer = query_huggingface(full_prompt)
+            structured_prompt = f"""Ты — эмпатичный психолог. Человек написал следующее: "{user_input}". 
+1. Определи его текущее эмоциональное состояние.
+2. Проанализируй, что может быть причиной его состояния.
+3. Дай рекомендации, как справиться с этим состоянием. Укажи конкретные шаги. 
+Структурируй ответ по пунктам, пиши тепло и поддерживающе."""
+
+            answer = query_huggingface(structured_prompt)
 
             st.session_state.history.append(("Эмоции", user_input, answer, emotion))
             st.success(answer)
